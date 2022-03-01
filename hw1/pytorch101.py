@@ -651,6 +651,7 @@ def mm_on_gpu(x: Tensor, w: Tensor) -> Tensor:
     #                      TODO: Implement this function                     #
     ##########################################################################
     # Replace "pass" statement with your code
+    torch.backends.cuda.matmul.allow_tf32 = False
     x=x.cuda()
     w=w.cuda()
     y=x.mm(w).cpu()
