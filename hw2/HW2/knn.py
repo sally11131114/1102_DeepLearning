@@ -334,7 +334,10 @@ def knn_cross_validate(x_train, y_train, num_folds=5, k_choices=None):
   # Hint: torch.chunk                                                          #
   ##############################################################################
   # Replace "pass" statement with your code
-  pass
+  x_train_folds = x_train.clone().view(x_train.shape[0], -1).chunk(5, dim=0)
+  y_train_folds = y_train.clone().chunk(5, dim=0)
+  """print("x_fold: ", len(x_train_folds))
+  print("y_fold: ", len(y_train_folds))"""
   ##############################################################################
   #                            END OF YOUR CODE                                #
   ##############################################################################
@@ -353,7 +356,28 @@ def knn_cross_validate(x_train, y_train, num_folds=5, k_choices=None):
   # values in k in k_to_accuracies.   HINT: torch.cat                          #
   ##############################################################################
   # Replace "pass" statement with your code
-  pass
+  for k in k_choices:
+    k_to_accuracies[k]=[]
+    for i in range(num_folds):
+      x_test_split = x_train_folds[i].clone()
+      y_test_split = y_train_folds[i].clone()
+      if(i!=0):
+        x_train_split = x_train_folds[0].clone()
+        y_train_split = y_train_folds[0].clone()
+      else:
+        x_train_split = x_train_folds[1].clone()
+        y_train_split = y_train_folds[1].clone()
+
+      for m in range(1, num_folds):
+        if(i==0):continue
+        if(m!=i):
+          x_train_split = torch.cat((x_train_split, x_train_folds[m]))
+          y_train_split = torch.cat((y_train_split, y_train_folds[m]))
+      classifier = KnnClassifier(x_train_split, y_train_split)
+      accuracy = classifier.check_accuracy(x_test_split, y_test_split, k, quiet=True)
+      k_to_accuracies[k].append(accuracy)
+    """print("test: ", x_test_split)
+    print("train: ", x_train_split)"""
   ##############################################################################
   #                            END OF YOUR CODE                                #
   ##############################################################################
@@ -383,7 +407,9 @@ def knn_get_best_k(k_to_accuracies):
   # the value of k that has the highest mean accuracy accross all folds.       #
   ##############################################################################
   # Replace "pass" statement with your code
-  pass
+  for k in k_to_accuracies:
+    k_to_accuracies[k] = sum(k_to_accuracies[k])
+  best_k = max(k_to_accuracies, key=k_to_accuracies.get)
   ##############################################################################
   #                            END OF YOUR CODE                                #
   ##############################################################################
