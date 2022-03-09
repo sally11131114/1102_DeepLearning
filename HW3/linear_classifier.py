@@ -147,12 +147,8 @@ def svm_loss_naive(W, X, y, reg):
   # Compute the gradient of the loss function and store it in dW. (part 2)    #
   #############################################################################
   # Replace "pass" statement with your code
-
-  #?
   dW /= num_train
-  dW += reg * W
-  #?
-
+  dW += reg *2* W
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
@@ -225,7 +221,7 @@ def svm_loss_vectorized(W, X, y, reg):
 
   dW = torch.mm(X.t(), scores_diff)
   dW /= X.shape[0]
-  dW += reg*W
+  dW += reg*2*W
   #將loss算出的score_diff拿來計算, 現在score_diff中剩下0以及>0的值(SVM loss function
   # 公式的結果), 並將score_diff中的每個train data對應到的正確的label(y[i]), 賦予
   # 不正確label之margin>0的數量並乘上-1(如同quiz2推導之公式)接著將X之transpose與
@@ -372,7 +368,8 @@ def svm_get_search_params():
   # TODO:   add your own hyper parameter lists.                             #
   ###########################################################################
   # Replace "pass" statement with your code
-  pass
+  learning_rates = [1e-2, 2e-2, 3e-2, 4e-2, 5e-2]
+  regularization_strengths = [1e-3, 2e-3, 3e-3, 4e-3, 5e-3]
   ###########################################################################
   #                           END OF YOUR CODE                              #
   ###########################################################################
@@ -418,7 +415,14 @@ def test_one_param_set(cls, data_dict, lr, reg, num_iters=2000):
   # num_iters = 100
 
   # Replace "pass" statement with your code
-  pass
+  loss_hist = cls.train(data_dict['X_train'], data_dict['y_train'], lr, reg, num_iters)
+  # 先train之後找到最好的W
+  y_train_pred = cls.predict(data_dict['X_train'])
+  # train後將原資料X_train餵入觀察是否overfit
+  y_val_pred = cls.predict(data_dict['X_val'])
+  # 接著亦將X_val餵入觀察精準度
+  train_acc = 100.0*(data_dict['y_train']==y_train_pred).double().mean().item()
+  val_acc = 100.0*(data_dict['y_val']==y_val_pred).double().mean().item()
   ############################################################################
   #                            END OF YOUR CODE                              #
   ############################################################################
@@ -463,7 +467,19 @@ def softmax_loss_naive(W, X, y, reg):
   # regularization!                                                           #
   #############################################################################
   # Replace "pass" statement with your code
-  pass
+  for i in range(X.shape[0]):
+    scores = W.t().mv(X[i])
+    scores -= torch.max(scores)
+    scores_exp = torch.exp(scores)
+    correct_scores_exp = scores_exp[y[i]]
+    loss += -1*torch.log(correct_scores_exp / sum(scores_exp))
+    for j in range(W.shape[1]):
+      if j==y[i]:
+        dW[:, y[i]]+=(scores_exp[j]/sum(scores_exp)-1)*X[i, :]
+      else :
+        dW[:, j]+=(scores_exp[j]/sum(scores_exp))*X[i, :]
+  loss = loss/X.shape[0]+reg*torch.sum(torch.square(W))
+  dW = dW/X.shape[0]+reg*2*W
   #############################################################################
   #                          END OF YOUR CODE                                 #
   #############################################################################
@@ -491,7 +507,19 @@ def softmax_loss_vectorized(W, X, y, reg):
   # regularization!                                                           #
   #############################################################################
   # Replace "pass" statement with your code
-  pass
+  scores = X.mm(W).t()
+  max_s, _ = torch.max(scores, 0)
+  #每個column找出最大值, 相當於取出一個data對於每個class的score
+  scores -= max_s
+  scores_exp = torch.exp(scores)
+  correct_scores_exp = scores_exp[y, range(X.shape[0])]
+  loss = torch.sum(-torch.log(correct_scores_exp/sum(scores_exp)))
+  loss = loss/X.shape[0]+reg*torch.sum(torch.square(W))
+
+  A= scores_exp/torch.sum(scores_exp, 0)
+  A[y, range(X.shape[0])] = A[y, range(X.shape[0])]-1
+  dW = (A.mm(X)).t()
+  dW = dW/X.shape[0]+reg*2*W
   #############################################################################
   #                          END OF YOUR CODE                                 #
   #############################################################################
@@ -520,7 +548,8 @@ def softmax_get_search_params():
   # classifier.                                                             #
   ###########################################################################
   # Replace "pass" statement with your code
-  pass
+  learning_rates = [1e-2, 2e-2, 3e-2, 4e-2, 5e-2]
+  regularization_strengths = [1e-3, 2e-3, 3e-3, 4e-3, 5e-3]
   ###########################################################################
   #                           END OF YOUR CODE                              #
   ###########################################################################
