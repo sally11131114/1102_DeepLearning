@@ -203,7 +203,26 @@ def nn_forward_backward(params, X, y=None, reg=0.0):
     # tensor of same size                                                     #
     ###########################################################################
     # Replace "pass" statement with your code
-    pass
+    ds = scores_exp.clone()
+    ds = ds.t()
+    ds /= ds.sum(axis=1).view(-1, 1)
+    ds[range(X.shape[0]), y] -= 1 #NxC
+
+    dh = torch.mm(ds, W2.t())   # NxH
+    dW2 = torch.mm(h1.t(), ds)  # HxC
+    db2 = ds.sum(axis = 0)      # H*W2+b2 = socres, db2 =ds*1.t() 1xC = 1xN x NxC
+    
+    dz = dh.clone()
+    mask = h1==0
+    dz[mask] = 0
+    
+    dW1 = torch.mm(X.t(), dz)   #DxH
+    db1 = dz.sum(axis = 0)
+
+    grads['W1']=dW1/N +reg*2*W1
+    grads['b1']=db1/N
+    grads['W2']=dW2/N +reg*2*W2
+    grads['b2']=db2/N
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -273,7 +292,12 @@ def nn_train(params, loss_func, pred_func, X, y, X_val, y_val,
     # stored in the grads dictionary defined above.                         #
     #########################################################################
     # Replace "pass" statement with your code
-    pass
+    W1, b1 = params['W1'], params['b1']
+    W2, b2 = params['W2'], params['b2']
+    W1 += (-1*learning_rate)*grads['W1']
+    b1 += (-1*learning_rate)*grads['b1']
+    W2 += (-1*learning_rate)*grads['W2']
+    b2 += (-1*learning_rate)*grads['b2']
     #########################################################################
     #                             END OF YOUR CODE                          #
     #########################################################################
@@ -329,7 +353,12 @@ def nn_predict(params, loss_func, X):
   # TODO: Implement this function; it should be VERY simple!                #
   ###########################################################################
   # Replace "pass" statement with your code
-  pass
+  W1, b1 = params['W1'], params['b1']
+  W2, b2 = params['W2'], params['b2']
+  hidden = X.mm(W1)+b1
+  hidden = torch.clamp(hidden, min=0)
+  scores = hidden.mm(W2)+b2
+  y_pred = torch.argmax(scores, axis=1)
   ###########################################################################
   #                              END OF YOUR CODE                           #
   ###########################################################################
