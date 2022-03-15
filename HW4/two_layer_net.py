@@ -393,7 +393,10 @@ def nn_get_search_params():
   # classifier.                                                             #
   ###########################################################################
   # Replace "pass" statement with your code
-  pass
+  hidden_sizes = [64, 128, 256]
+  regularization_strengths = [1e-5, 1e-3, 0]
+  learning_rates = [1, 3, 10]
+  learning_rate_decays = [0.95, 0.9, 0.85, 0.8]
   ###########################################################################
   #                           END OF YOUR CODE                              #
   ###########################################################################
@@ -447,7 +450,27 @@ def find_best_net(data_dict, get_param_set_fn):
   # automatically like we did on the previous exercises.                      #
   #############################################################################
   # Replace "pass" statement with your code
-  pass
+  i=0
+  learning_rates, hidden_sizes, regularization_strengths, learning_rate_decays = get_param_set_fn()
+  for lr in learning_rates:
+    for hs in hidden_sizes:
+      for reg in regularization_strengths:
+        for lrd in learning_rate_decays:
+          i+=1
+          print('Training NN %d / %d with '% (i, i))
+          print('learning_rate=%e, hidden_sizes=%e, \nreg=%e, learning_rate_decays=%e'%(lr, hs, reg, lrd))
+          net = TwoLayerNet(3 * 32 * 32, hs, 10, device=data_dict['X_train'].device, dtype=data_dict['X_train'].dtype)
+          stats = net.train(data_dict['X_train'], data_dict['y_train'], data_dict['X_val'], data_dict['y_val'],
+            num_iters=3000, batch_size=1000,
+            learning_rate=lr, learning_rate_decay=lrd,
+            reg=reg, verbose=False)
+          if stats['val_acc_history'][-1] > best_val_acc :
+            best_net = net
+            best_stat = stats
+            best_val_acc = stats['val_acc_history'][-1]
+          print('lr %e hs %e reg %e lrd %e/n'% (lr, hs, reg, lrd))
+          print('train accuracy: %e val accuracy %e\n'%(stats['train_acc_history'][-1], stats['val_acc_history'][-1]))
+  print('best validation accuracy : %f' % best_val_acc)
   #############################################################################
   #                               END OF YOUR CODE                            #
   #############################################################################
