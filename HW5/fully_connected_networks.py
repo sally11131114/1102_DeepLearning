@@ -205,7 +205,10 @@ class TwoLayerNet(object):
     # weights and biases using the keys 'W2' and 'b2'.                        #
     ###########################################################################
     # Replace "pass" statement with your code
-    pass
+    self.params['W1'] = weight_scale*torch.randn(input_dim, hidden_dim)
+    self.params['b1'] = torch.zeros(hidden_dim)
+    self.params['W2'] = weight_scale*torch.randn(hidden_dim, num_classes)
+    self.params['b2'] = torch.zeros(num_classes)
     ###########################################################################
     #                            END OF YOUR CODE                             #
     ###########################################################################
@@ -253,7 +256,12 @@ class TwoLayerNet(object):
     # class scores for X and storing them in the scores variable.             #
     ###########################################################################
     # Replace "pass" statement with your code
-    pass
+    W1 = self.params['W1']
+    b1 = self.params['b1']
+    W2 = self.params['W2']
+    b2 = self.params['b2']
+    h_out, h_cache = Linear_ReLU.forward(X, W1, b1)
+    scores, s_cache = Linear.forward(h_out, W2, b2)
     ###########################################################################
     #                            END OF YOUR CODE                             #
     ###########################################################################
@@ -274,7 +282,13 @@ class TwoLayerNet(object):
     # a factor of 0.5.                                                        #
     ###########################################################################
     # Replace "pass" statement with your code
-    pass
+    loss, loss_grad=softmax_loss(scores, y)
+    loss += self.reg* (torch.sum(torch.square(W1)) + torch.sum(torch.square(W2)))
+
+    h_back, grads['W2'], grads['b2'] = Linear.backward(loss_grad, s_cache)
+    grads['W2']+=self.reg*2*W2
+    _, grads['W1'], grads['b1'] = Linear_ReLU.backward(h_back, h_cache)
+    grads['W1']+=self.reg*2*W1
     ###########################################################################
     #                            END OF YOUR CODE                             #
     ###########################################################################
