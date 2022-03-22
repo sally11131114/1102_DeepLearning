@@ -500,7 +500,8 @@ def get_three_layer_network_params():
   weight_scale = 1e-2   # Experiment with this!
   learning_rate = 1e-4  # Experiment with this!
   # Replace "pass" statement with your code
-  pass
+  weight_scale = 1      #1e-2 -> 1e-1 -> 1
+  learning_rate = 1e-2  #1e-4 -> 1e-3 -> 1e-2
   ############################################################################
   #                             END OF YOUR CODE                             #
   ############################################################################
@@ -515,7 +516,8 @@ def get_five_layer_network_params():
   learning_rate = 2e-3  # Experiment with this!
   weight_scale = 1e-5   # Experiment with this!
   # Replace "pass" statement with your code
-  pass
+  weight_scale = 2e-1
+  learning_rate = 1e-1
   ############################################################################
   #                             END OF YOUR CODE                             #
   ############################################################################
