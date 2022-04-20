@@ -277,7 +277,17 @@ def initialize_three_layer_conv_part4():
   # Hint: nn.Sequential, Flatten (implemented at the start of Part IV)   
   ####################################################################################
   # Replace "pass" statement with your code
-  pass
+  model = nn.Sequential(OrderedDict([
+  ('cn1', nn.Conv2d(C, channel_1, kernel_size_1, padding=pad_size_1)),
+  ('relu1', nn.ReLU()),
+  ('cn2', nn.Conv2d(channel_1, channel_2, kernel_size_2, padding=pad_size_2)),
+  ('relu2', nn.ReLU()),
+  ('flatten', Flatten()),
+  ('fc2', nn.Linear(channel_2*H*W, num_classes))
+  ]))
+  optimizer = optim.SGD(model.parameters(), lr=learning_rate, 
+                      weight_decay=weight_decay,
+                      momentum=momentum, nesterov=True)
   ################################################################################
   #                                 END OF YOUR CODE                             
   ################################################################################
@@ -304,7 +314,18 @@ class PlainBlock(nn.Module):
     # Store the result in self.net.                                            
     ############################################################################
     # Replace "pass" statement with your code
-    pass
+    if downsample:
+      s=2
+    else:
+      s=1
+    self.net = nn.Sequential(
+      nn.BatchNorm2d(Cin),
+      nn.ReLU(),
+      nn.Conv2d(Cin, Cout, 3, s, 1),
+      nn.BatchNorm2d(Cout),
+      nn.ReLU(),
+      nn.Conv2d(Cout, Cout, 3, 1, 1)
+    )
     ############################################################################
     #                                 END OF YOUR CODE                         #
     ############################################################################
