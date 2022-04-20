@@ -349,7 +349,15 @@ class ResidualBlock(nn.Module):
     # Store the main block in self.block and the shortcut in self.shortcut.    #
     ############################################################################
     # Replace "pass" statement with your code
-    pass
+      
+    self.block = PlainBlock(Cin, Cout, downsample)
+    if downsample :
+      self.shortcut = nn.Conv2d(Cin, Cout, 1, 2, 0)
+    else :
+      if Cin == Cout:
+        self.shortcut = nn.Identity()
+      else:
+        self.shortcut = nn.Conv2d(Cin, Cout, 1, 1, 0)
     ############################################################################
     #                                 END OF YOUR CODE                         #
     ############################################################################
@@ -369,7 +377,10 @@ class ResNet(nn.Module):
     # Store the model in self.cnn.                                             #
     ############################################################################
     # Replace "pass" statement with your code
-    pass
+    self.cnn = nn.Sequential(
+      ResNetStem(Cin, stage_args[0][0]), #cin, cout? why 32
+      *[ResNetStage(*stage, block) for stage in stage_args]
+    )
     ############################################################################
     #                                 END OF YOUR CODE                         #
     ############################################################################
@@ -382,7 +393,12 @@ class ResNet(nn.Module):
     # Store the output in `scores`.                                            #
     ############################################################################
     # Replace "pass" statement with your code
-    pass
+    x = self.cnn(x)
+    h_out, w_out = x.shape[2], x.shape[3]
+    x = F.avg_pool2d(x, h_out)
+    x = flatten(x)
+    x = self.fc(x)
+    scores = x
     ############################################################################
     #                                 END OF YOUR CODE                         #
     ############################################################################
@@ -404,7 +420,28 @@ class ResidualBottleneckBlock(nn.Module):
     # Store the main block in self.block and the shortcut in self.shortcut.    #
     ############################################################################
     # Replace "pass" statement with your code
-    pass
+    if downsample:
+      s=2
+    else:
+      s=1
+    self.block = nn.Sequential(
+      nn.BatchNorm2d(Cin),
+      nn.ReLU(),
+      nn.Conv2d(Cin, Cout//4, 1, 1, 0),
+      nn.BatchNorm2d(Cout//4),
+      nn.ReLU(),
+      nn.Conv2d(Cout//4, Cout//4, 3, s, 1),
+      nn.BatchNorm2d(Cout//4),
+      nn.ReLU(),
+      nn.Conv2d(Cout//4, Cout, 1, 1, 0)
+    )
+    if downsample :
+      self.shortcut = nn.Conv2d(Cin, Cout, 1, 2, 0)
+    else :
+      if Cin == Cout:
+        self.shortcut = nn.Identity()
+      else:
+        self.shortcut = nn.Conv2d(Cin, Cout, 1, 1, 0)
     ############################################################################
     #                                 END OF YOUR CODE                         #
     ############################################################################
