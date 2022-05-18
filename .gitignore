@@ -1,2 +1,11 @@
 **/__pycache__/
 **/.ipynb_checkpoints/
+**/datasets/
+**/models/
+**/lightning_logs/
+*.pdf
+*.gz
+*.tar
+*.zip
+*.pt
+*.doc

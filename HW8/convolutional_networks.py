@@ -440,8 +440,8 @@ class DeepConvNet(object):
     layers_dim = num_filters+[num_classes]
     if self.batchnorm == True:
       for i in range(len(num_filters)):
-        self.params['gamma'+repr(i+1)] = torch.ones(layers_dim[i]).to(dtype).to(device)
-        self.params['beta'+repr(i+1)] = torch.zeros(layers_dim[i]).to(dtype).to(device)
+        self.params['gamma'+repr(i+1)] = torch.ones(layers_dim[i], device=device, dtype=dtype)
+        self.params['beta'+repr(i+1)] = torch.zeros(layers_dim[i], device=device, dtype=dtype)
     ############################################################################
     #                             END OF YOUR CODE                             #
     ############################################################################
@@ -541,32 +541,52 @@ class DeepConvNet(object):
     # or the convolutional sandwich layers, to simplify your implementation.   #
     ############################################################################
     # Replace "pass" statement with your code
-    c_cache = []
-    p_cache = []
-    temp_p_cache=0
+    hidden = X
+    cache_all=[]
     if self.batchnorm:
-      c_out, temp_c_cache = Conv_BatchNorm_ReLU.forward(X, self.params['W1'], self.params['b1'], self.params['gamma1'], self.params['beta1'], conv_param, self.bn_params[0])
+      for i in range(self.num_layers-1):
+        W, b = self.params['W%d' % (i+1)], self.params['b%d' % (i+1)]
+        gamma, beta = self.params['gamma%d' % (i+1)], self.params['beta%d' % (i+1)]
+        if i in self.max_pools:
+          hidden, cache = Conv_BatchNorm_ReLU_Pool.forward(hidden, W, b, gamma, beta, conv_param, self.bn_params[i], pool_param)
+        else:
+          hidden, cache = Conv_BatchNorm_ReLU.forward(hidden, W, b, gamma, beta, conv_param, self.bn_params[i])
+        cache_all.append(cache)
     else:
-      c_out, temp_c_cache = Conv_ReLU.forward(X, self.params['W1'], self.params['b1'], conv_param)
-    if (0 in self.max_pools):
-      c_out, temp_p_cache = FastMaxPool.forward(c_out, pool_param)
-    else :
-      temp_p_cache=0
-    c_cache.append(temp_c_cache)
-    p_cache.append(temp_p_cache)
+      for i in range(self.num_layers-1):
+        W, b = self.params['W%d' % (i+1)], self.params['b%d' % (i+1)]
+        if i in self.max_pools:
+          hidden, cache = Conv_ReLU_Pool.forward(hidden, W, b, conv_param, pool_param)
+        else:
+          hidden, cache = Conv_ReLU.forward(hidden, W, b, conv_param)
+        cache_all.append(cache)
 
-    for i in range(2, self.num_layers):
-      if self.batchnorm:
-        c_out, temp_c_cache = Conv_BatchNorm_ReLU.forward(c_out, self.params['W'+repr(i)], self.params['b'+repr(i)], self.params['gamma'+repr(i)], self.params['beta'+repr(i)], conv_param, self.bn_params[i-1])
-      else:
-        c_out, temp_c_cache = Conv_ReLU.forward(c_out, self.params['W'+repr(i)], self.params['b'+repr(i)], conv_param)
-      if ((i-1) in self.max_pools):
-        c_out, temp_p_cache = FastMaxPool.forward(c_out, pool_param)
-      else :
-        temp_p_cache=0
-      c_cache.append(temp_c_cache)
-      p_cache.append(temp_p_cache)
-    scores, s_cache = Linear.forward(c_out, self.params['W'+repr(self.num_layers)], self.params['b'+repr(self.num_layers)])
+    W, b = self.params['W%d' % self.num_layers], self.params['b%d' % self.num_layers]
+    scores, cache = Linear.forward(hidden, W, b)
+    cache_all.append(cache)
+    # if self.batchnorm:
+    #   c_out, temp_c_cache = Conv_BatchNorm_ReLU.forward(X, self.params['W1'], self.params['b1'], self.params['gamma1'], self.params['beta1'], conv_param, self.bn_params[0])
+    # else:
+    #   c_out, temp_c_cache = Conv_ReLU.forward(X, self.params['W1'], self.params['b1'], conv_param)
+    # if (0 in self.max_pools):
+    #   c_out, temp_p_cache = FastMaxPool.forward(c_out, pool_param)
+    # else :
+    #   temp_p_cache=0
+    # c_cache.append(temp_c_cache)
+    # p_cache.append(temp_p_cache)
+
+    # for i in range(2, self.num_layers):
+    #   if self.batchnorm:
+    #     c_out, temp_c_cache = Conv_BatchNorm_ReLU.forward(c_out, self.params['W'+repr(i)], self.params['b'+repr(i)], self.params['gamma'+repr(i)], self.params['beta'+repr(i)], conv_param, self.bn_params[i-1])
+    #   else:
+    #     c_out, temp_c_cache = Conv_ReLU.forward(c_out, self.params['W'+repr(i)], self.params['b'+repr(i)], conv_param)
+    #   if ((i-1) in self.max_pools):
+    #     c_out, temp_p_cache = FastMaxPool.forward(c_out, pool_param)
+    #   else :
+    #     temp_p_cache=0
+    #   c_cache.append(temp_c_cache)
+    #   p_cache.append(temp_p_cache)
+    # scores, s_cache = Linear.forward(c_out, self.params['W'+repr(self.num_layers)], self.params['b'+repr(self.num_layers)])
     ############################################################################
     #                             END OF YOUR CODE                             #
     ############################################################################
@@ -586,21 +606,55 @@ class DeepConvNet(object):
     # a factor of 0.5                                                          #
     ############################################################################
     # Replace "pass" statement with your code
-    loss, loss_grad=softmax_loss(scores, y)
-    for i in range(1, self.num_layers+1):
-      loss += self.reg* (torch.sum(torch.square(self.params['W'+repr(i)])))
+    W = self.params['W%d' % self.num_layers]
 
-    c_back, grads['W'+repr(self.num_layers)], grads['b'+repr(self.num_layers)] = Linear.backward(loss_grad, s_cache)
-    grads['W'+repr(self.num_layers)]+=self.reg*2*self.params['W'+repr(self.num_layers)]
+    loss, dS = softmax_loss(scores, y)
+    loss+= self.reg * torch.sum(W*W)
 
-    for i in range(self.num_layers-1, 0, -1):
-      if ((i-1) in self.max_pools):
-        c_back = FastMaxPool.backward(c_back, p_cache[i-1])
-      if self.batchnorm:
-        c_back, grads['W'+repr(i)], grads['b'+repr(i)], grads['gamma'+repr(i)], grads['beta'+repr(i)] = Conv_BatchNorm_ReLU.backward(c_back, c_cache[i-1])
-      else:
-        c_back, grads['W'+repr(i)], grads['b'+repr(i)] = Conv_ReLU.backward(c_back, c_cache[i-1])
-      grads['W'+repr(i)]+=self.reg*2*self.params['W'+repr(i)]
+    dout, dw, db = Linear.backward(dS, cache_all[-1])
+    cache_all.pop()
+    grads['W%d' % self.num_layers] = dw+self.reg*2*W
+    grads['b%d' % self.num_layers] = db
+    if self.batchnorm == True:
+      for i in reversed(range(self.num_layers-1)):
+        W = self.params['W%d' %(i+1)]
+        loss+=self.reg*torch.sum(W*W)
+        if i in self.max_pools:
+          dout, dw, db, dgamma, dbeta = Conv_BatchNorm_ReLU_Pool.backward(dout, cache_all[-1])
+        else:
+          dout, dw, db, dgamma, dbeta = Conv_BatchNorm_ReLU.backward(dout, cache_all[-1])
+        cache_all.pop()
+        grads['W%d' % (i+1)] = dw+self.reg*2*W
+        grads['b%d' % (i+1)] = db
+        grads['gamma%d' % (i+1)] = dgamma
+        grads['beta%d' % (i+1)] = dbeta
+    else:
+      for i in reversed(range(self.num_layers-1)):
+        W = self.params['W%d' %(i+1)]
+        loss+=self.reg*torch.sum(W*W)
+        if i in self.max_pools:
+          dout,  dw, db= Conv_ReLU_Pool.backward(dout, cache_all[-1])
+        else:
+          dout, dw, db= Conv_ReLU.backward(dout, cache_all[-1])
+        cache_all.pop()
+        grads['W%d' % (i+1)] = dw+self.reg*2*W
+        grads['b%d' % (i+1)] = db
+
+    # loss, loss_grad=softmax_loss(scores, y)
+    # for i in range(1, self.num_layers+1):
+    #   loss += self.reg* (torch.sum(torch.square(self.params['W'+repr(i)])))
+
+    # c_back, grads['W'+repr(self.num_layers)], grads['b'+repr(self.num_layers)] = Linear.backward(loss_grad, s_cache)
+    # grads['W'+repr(self.num_layers)]+=self.reg*2*self.params['W'+repr(self.num_layers)]
+
+    # for i in range(self.num_layers-1, 0, -1):
+    #   if ((i-1) in self.max_pools):
+    #     c_back = FastMaxPool.backward(c_back, p_cache[i-1])
+    #   if self.batchnorm:
+    #     c_back, grads['W'+repr(i)], grads['b'+repr(i)], grads['gamma'+repr(i)], grads['beta'+repr(i)] = Conv_BatchNorm_ReLU.backward(c_back, c_cache[i-1])
+    #   else:
+    #     c_back, grads['W'+repr(i)], grads['b'+repr(i)] = Conv_ReLU.backward(c_back, c_cache[i-1])
+    #   grads['W'+repr(i)]+=self.reg*2*self.params['W'+repr(i)]
     ############################################################################
     #                             END OF YOUR CODE                             #
     ############################################################################
