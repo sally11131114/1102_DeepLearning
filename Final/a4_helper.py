@@ -357,7 +357,7 @@ def inference_with_detector(
                         f"{idx_to_class[b[4].item()]} {b[5]:.6f} {b[0]:.2f} {b[1]:.2f} {b[2]:.2f} {b[3]:.2f}\n"
                     )
         else:
-            eecs598.utils.detection_visualizer(
+            usefuns.utils.detection_visualizer(
                 image, idx_to_class, gt_boxes, pred_boxes
             )
 

@@ -669,19 +669,31 @@ class FCOS(nn.Module):
             )
             # Step 1:
             # Replace "pass" statement with your code
-            pass
+            level_pred_classes = torch.argmax(level_cls_logits, 1)
+            #找出這個框對於哪個class分數最高
+            temp = torch.zeros(level_pred_scores.shape[0], dtype=level_pred_scores.dtype, device=level_pred_scores.device)
+            for i in range(level_pred_scores.shape[0]):
+                temp[i]= level_pred_scores[i][level_pred_classes[i]]
+            level_pred_scores = temp
 
             # Step 2:
             # Replace "pass" statement with your code
-            pass
+            mask = level_pred_scores > test_score_thresh
+            level_pred_classes = level_pred_classes[mask]
+            level_pred_scores = level_pred_scores[mask]
 
             # Step 3:
             # Replace "pass" statement with your code
-            pass
+            level_pred_boxes = fcos_apply_deltas_to_locations(level_deltas, level_locations, stride=self.backbone.fpn_strides[level_name])
+            level_pred_boxes = level_pred_boxes[mask]
 
             # Step 4: Use `images` to get (height, width) for clipping.
             # Replace "pass" statement with your code
-            pass
+            B, C, H, W = images.shape
+            level_pred_boxes[:, 0] = level_pred_boxes[:, 0].clamp(min=0) #x1 左上點
+            level_pred_boxes[:, 1] = level_pred_boxes[:, 1].clamp(min=0) #y1
+            level_pred_boxes[:, 2] = level_pred_boxes[:, 2].clamp(max=W) #x2 右下點
+            level_pred_boxes[:, 3] = level_pred_boxes[:, 3].clamp(max=H) #y2
             ##################################################################
             #                          END OF YOUR CODE                      #
             ##################################################################
