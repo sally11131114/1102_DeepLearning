@@ -108,8 +108,11 @@ class FCOSPredictionNetwork(nn.Module):
 
         # Replace "pass" statement with your code
         self.pred_cls = nn.Conv2d(stem_channels[-1], num_classes, 3, 1, 1)
+        nn.init.normal_(self.pred_cls.weight, 0, 0.01)
         self.pred_box = nn.Conv2d(stem_channels[-1], 4, 3, 1, 1)
+        nn.init.normal_(self.pred_box.weight, 0, 0.01)
         self.pred_ctr = nn.Conv2d(stem_channels[-1], 1, 3, 1, 1)
+        nn.init.normal_(self.pred_ctr.weight, 0, 0.01)        
         ######################################################################
         #                           END OF YOUR CODE                         #
         ######################################################################
