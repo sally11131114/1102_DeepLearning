@@ -107,10 +107,6 @@ class FCOSPredictionNetwork(nn.Module):
         self.pred_ctr = None  # Centerness conv
 
         # Replace "pass" statement with your code
-        # self.pred_cls = nn.Conv2d(cur_channel, num_classes, 3, padding=1)  # Class prediction conv
-        # self.pred_box = nn.Conv2d(cur_channel, 4, 3, padding=1)  # Box regression conv
-        # self.pred_ctr = nn.Conv2d(cur_channel, 1, 3, padding=1)
-
         self.pred_cls = nn.Conv2d(stem_channels[-1], num_classes, 3, 1, 1)
         nn.init.normal_(self.pred_cls.weight, 0, 0.01)
         self.pred_box = nn.Conv2d(stem_channels[-1], 4, 3, 1, 1)
@@ -163,18 +159,6 @@ class FCOSPredictionNetwork(nn.Module):
         centerness_logits = {}
 
         # Replace "pass" statement with your code
-        # for key in feats_per_fpn_level.keys():
-        #     x = feats_per_fpn_level[key]
-        #     x_cls = self.stem_cls(x)
-        #     class_logits[key] = self.pred_cls(x_cls)
-        #     B, C, H, W = class_logits[key].shape
-        #     class_logits[key] = class_logits[key].reshape(B, -1, H*W).transpose(1,2)
-        #     x_box = self.stem_box(x)
-        #     boxreg_deltas[key] = self.pred_box(x_box)
-        #     boxreg_deltas[key] = boxreg_deltas[key].reshape(B, -1, H*W).transpose(1,2)
-        #     centerness_logits[key] = self.pred_ctr(x_box)
-        #     centerness_logits[key] = centerness_logits[key].reshape(B, -1, H*W).transpose(1,2)
-
         for p in feats_per_fpn_level.keys():
             temp = feats_per_fpn_level[p]
             temp_cls = self.stem_cls(temp)
