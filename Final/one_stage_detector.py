@@ -107,6 +107,10 @@ class FCOSPredictionNetwork(nn.Module):
         self.pred_ctr = None  # Centerness conv
 
         # Replace "pass" statement with your code
+        # self.pred_cls = nn.Conv2d(cur_channel, num_classes, 3, padding=1)  # Class prediction conv
+        # self.pred_box = nn.Conv2d(cur_channel, 4, 3, padding=1)  # Box regression conv
+        # self.pred_ctr = nn.Conv2d(cur_channel, 1, 3, padding=1)
+
         self.pred_cls = nn.Conv2d(stem_channels[-1], num_classes, 3, 1, 1)
         nn.init.normal_(self.pred_cls.weight, 0, 0.01)
         self.pred_box = nn.Conv2d(stem_channels[-1], 4, 3, 1, 1)
@@ -159,13 +163,25 @@ class FCOSPredictionNetwork(nn.Module):
         centerness_logits = {}
 
         # Replace "pass" statement with your code
+        # for key in feats_per_fpn_level.keys():
+        #     x = feats_per_fpn_level[key]
+        #     x_cls = self.stem_cls(x)
+        #     class_logits[key] = self.pred_cls(x_cls)
+        #     B, C, H, W = class_logits[key].shape
+        #     class_logits[key] = class_logits[key].reshape(B, -1, H*W).transpose(1,2)
+        #     x_box = self.stem_box(x)
+        #     boxreg_deltas[key] = self.pred_box(x_box)
+        #     boxreg_deltas[key] = boxreg_deltas[key].reshape(B, -1, H*W).transpose(1,2)
+        #     centerness_logits[key] = self.pred_ctr(x_box)
+        #     centerness_logits[key] = centerness_logits[key].reshape(B, -1, H*W).transpose(1,2)
+
         for p in feats_per_fpn_level.keys():
             temp = feats_per_fpn_level[p]
             temp_cls = self.stem_cls(temp)
             temp_box = self.stem_box(temp)
             class_logits[p] = self.pred_cls(temp_cls)
             boxreg_deltas[p] = self.pred_box(temp_box)
-            centerness_logits[p] = self.pred_ctr(temp_cls)
+            centerness_logits[p] = self.pred_ctr(temp_box)
             B, C, H, W = class_logits[p].shape
             class_logits[p] = class_logits[p].reshape(B, -1, H*W).transpose(1, 2)
             boxreg_deltas[p] = boxreg_deltas[p].reshape(B, -1, H*W).transpose(1, 2)
@@ -564,12 +580,16 @@ class FCOS(nn.Module):
         temp_ma_gt_d = matched_gt_deltas.reshape(-1,4)
         center_gt = fcos_make_centerness_targets(temp_ma_gt_d)
         center_gt = center_gt.reshape(B, H_W, 1)
-        turn_to_onehot = torch.zeros_like(pred_cls_logits)
-        for i in range(N):
-            for j in range(H_W):
-                turn_to_onehot[i][j][matched_gt_boxes[i][j][-1].long()] = 1.0
+        # turn_to_onehot = torch.zeros_like(pred_cls_logits)
+        # for i in range(N):
+        #     for j in range(H_W):
+        #         turn_to_onehot[i][j][matched_gt_boxes[i][j][-1].long()] = 1.0
 
-        loss_cls = sigmoid_focal_loss(pred_cls_logits, turn_to_onehot)
+        gt_cls_onehot = torch.zeros((N*H_W, C+1),device=pred_cls_logits.device)
+        gt_cls_onehot[torch.arange(N*H_W),matched_gt_boxes[:,:,-1].reshape(-1).long()] = 1
+        label = gt_cls_onehot[:,:-1].reshape(N,H_W,-1)
+
+        loss_cls = sigmoid_focal_loss(pred_cls_logits, label.float())
         loss_box = F.smooth_l1_loss(pred_boxreg_deltas, matched_gt_deltas, reduction="none")*0.25
         loss_ctr = F.binary_cross_entropy_with_logits(pred_ctr_logits, center_gt, reduction="none")
         mask = matched_gt_deltas<0
